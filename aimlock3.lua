@@ -3,6 +3,7 @@ local AimLockButton = Instance.new("TextButton")
 local player = game.Players.LocalPlayer
 local aiming = false
 local aimingLoop
+local updateLoop
 local lockedTarget = nil
 
 ScreenGui.Name = "AimLockGui"
@@ -95,6 +96,21 @@ AimLockButton.MouseButton1Click:Connect(function()
         InfoLabel.Text = ""
     end
 end)
+
+local function updateInfoLabel()
+    while true do
+        local nearestPlayer, distance = getNearestPlayerToCrosshair()
+        if nearestPlayer then
+            InfoLabel.Text = "NP: " .. nearestPlayer.Name .. " [" .. math.floor(distance) .. "]"
+        else
+            InfoLabel.Text = "NP: None"
+        end
+        wait(0.1)
+    end
+end
+
+updateLoop = coroutine.create(updateInfoLabel)
+coroutine.resume(updateLoop)
 
 player.CharacterAdded:Connect(function()
     ScreenGui.Parent = game.CoreGui
