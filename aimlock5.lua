@@ -1,7 +1,7 @@
 local ScreenGui = Instance.new("ScreenGui")
 local MobileButton = Instance.new("TextButton")
 local PCButton = Instance.new("TextButton")
-local InfoLabel = Instance.new("TextLabel")
+local IL = Instance.new("TextLabel")
 local AimLockButton = Instance.new("TextButton")
 local player = game.Players.LocalPlayer
 local aiming = false
@@ -13,14 +13,14 @@ local bindKey = nil
 ScreenGui.Name = "AimLockGui"
 ScreenGui.Parent = game.CoreGui
 
-InfoLabel.Name = "InfoLabel"
-InfoLabel.Size = UDim2.new(0, 130, 0, 25)
-InfoLabel.Position = UDim2.new(0.80, 0, -0.01, 0)
-InfoLabel.BackgroundColor3 = Color3.new(0, 0, 0)
-InfoLabel.TextColor3 = Color3.new(1, 1, 1)
-InfoLabel.Font = Enum.Font.GothamBold
-InfoLabel.TextScaled = true
-InfoLabel.Parent = ScreenGui
+IL.Name = "InfoLabel"
+IL.Size = UDim2.new(0, 130, 0, 25)
+IL.Position = UDim2.new(0.80, 0, -0.01, 0)
+IL.BackgroundColor3 = Color3.new(0, 0, 0)
+IL.TextColor3 = Color3.new(1, 1, 1)
+IL.Font = Enum.Font.GothamBold
+IL.TextScaled = true
+IL.Parent = ScreenGui
 
 MobileButton.Name = "MobileButton"
 MobileButton.Size = UDim2.new(0, 300, 0, 150)  -- Увеличен размер кнопки
@@ -107,9 +107,9 @@ local function toggleAiming()
     if aiming then
         lockedTarget, distance = getNearestPlayerToCrosshair()
         if lockedTarget then
-            InfoLabel.Text = "NP: " .. lockedTarget.Name .. " [" .. math.floor(distance) .. "]"
+            IL.Text = "NP: " .. lockedTarget.Name .. " [" .. math.floor(distance) .. "]"
         else
-            InfoLabel.Text = "NP: None"
+            IL.Text = "NP: None"
         end
         aimingLoop = game:GetService("RunService").RenderStepped:Connect(lookAtLockedTarget)
     else
@@ -117,7 +117,7 @@ local function toggleAiming()
             aimingLoop:Disconnect()
         end
         lockedTarget = nil
-        InfoLabel.Text = ""
+        IL.Text = ""
     end
 end
 
@@ -127,9 +127,9 @@ local function updateInfoLabel()
     while true do
         local nearestPlayer, distance = getNearestPlayerToCrosshair()
         if nearestPlayer then
-            InfoLabel.Text = "NP: " .. nearestPlayer.Name .. " [" .. math.floor(distance) .. "]"
+            IL.Text = "NP: " .. nearestPlayer.Name .. " [" .. math.floor(distance) .. "]"
         else
-            InfoLabel.Text = "NP: None"
+            IL.Text = "NP: None"
         end
         wait(0.1)
     end
@@ -138,15 +138,15 @@ end
 local function enablePCMode()
     MobileButton.Visible = false
     PCButton.Visible = false
-    InfoLabel.Text = "Press any button to bind AimLock"
-    InfoLabel.Position = UDim2.new(0.45, 0, 0.45, 0)
+    IL.Text = "Press any button to bind AimLock"
+    IL.Position = UDim2.new(0.45, 0, 0.45, 0)
     local inputService = game:GetService("UserInputService")
 
     local function onInputBegan(input, gameProcessed)
         if not gameProcessed then
             bindKey = input.KeyCode
-            InfoLabel.Text = "Binded to: " .. tostring(bindKey)
-            InfoLabel.Position = UDim2.new(0.80, 0, -0.01, 0)
+            IL.Text = "Binded to: " .. tostring(bindKey)
+            IL.Position = UDim2.new(0.80, 0, -0.01, 0)
             inputService.InputBegan:Connect(function(key, processed)
                 if not processed and key.KeyCode == bindKey then
                     toggleAiming()
