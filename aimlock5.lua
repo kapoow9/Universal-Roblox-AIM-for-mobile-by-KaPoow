@@ -1,98 +1,51 @@
-local ScreenGui = Instance.new("ScreenGui")
-local MobileButton = Instance.new("TextButton")
-local PCButton = Instance.new("TextButton")
-local IL = Instance.new("TextLabel")
-local AimLockButton = Instance.new("TextButton")
-local player = game.Players.LocalPlayer
-local aiming = false
-local aimingLoop
-local updateLoop
-local lockedTarget = nil
-local bindKey = nil
+local gui = Instance.new("ScreenGui", game.CoreGui)
+local mbBtn, pcBtn, alBtn, il, bindLabel = Instance.new("TextButton"), Instance.new("TextButton"), Instance.new("TextButton"), Instance.new("TextLabel"), Instance.new("TextLabel")
+local player, aiming, loop, lockedTarget, bindKey = game.Players.LocalPlayer, false, nil, nil, nil
 
-ScreenGui.Name = "AimLockGui"
-ScreenGui.Parent = game.CoreGui
+local function createButton(name, size, pos, text, parent)
+    local btn = Instance.new("TextButton", parent)
+    btn.Name, btn.Size, btn.Position = name, size, pos
+    btn.BackgroundColor3, btn.TextColor3, btn.Font, btn.TextScaled = Color3.new(0, 0, 0), Color3.new(1, 1, 1), Enum.Font.GothamBold, true
+    btn.Text = text
+    return btn
+end
 
-IL.Name = "InfoLabel"
-IL.Size = UDim2.new(0, 130, 0, 25)
-IL.Position = UDim2.new(0.80, 0, -0.01, 0)
-IL.BackgroundColor3 = Color3.new(0, 0, 0)
-IL.TextColor3 = Color3.new(1, 1, 1)
-IL.Font = Enum.Font.GothamBold
-IL.TextScaled = true
-IL.Parent = ScreenGui
+local screenCenterX = 0.5
+local screenCenterY = 0.5
+local buttonOffsetX = 0.15
+local buttonSize = UDim2.new(0, 150, 0, 150)
 
-MobileButton.Name = "MobileButton"
-MobileButton.Size = UDim2.new(0, 300, 0, 150)  -- Увеличен размер кнопки
-MobileButton.Position = UDim2.new(0.35, 0, 0.35, 0)
-MobileButton.BackgroundColor3 = Color3.new(0, 0, 0)
-MobileButton.TextColor3 = Color3.new(1, 1, 1)
-MobileButton.Font = Enum.Font.GothamBold
-MobileButton.Text = "Mobile"
-MobileButton.TextScaled = true
-MobileButton.Parent = ScreenGui
+mbBtn = createButton("MobileButton", buttonSize, UDim2.new(screenCenterX - buttonOffsetX - 0.075, 0, screenCenterY - 0.075, 0), "Mobile", gui)
+pcBtn = createButton("PCButton", buttonSize, UDim2.new(screenCenterX + buttonOffsetX - 0.075, 0, screenCenterY - 0.075, 0), "PC", gui)
+alBtn = createButton("AimLockButton", UDim2.new(0, 50, 0, 50), UDim2.new(0.85, 0, 0.08, 0), "AL", nil)
+alBtn.TextColor3 = Color3.new(1, 0, 0)
+Instance.new("UICorner", alBtn).CornerRadius = UDim.new(0, 5)
 
-PCButton.Name = "PCButton"
-PCButton.Size = UDim2.new(0, 300, 0, 150)  -- Увеличен размер кнопки
-PCButton.Position = UDim2.new(0.55, 0, 0.35, 0)
-PCButton.BackgroundColor3 = Color3.new(0, 0, 0)
-PCButton.TextColor3 = Color3.new(1, 1, 1)
-PCButton.Font = Enum.Font.GothamBold
-PCButton.Text = "PC"
-PCButton.TextScaled = true
-PCButton.Parent = ScreenGui
+il.Name, il.Size, il.Position = "InfoLabel", UDim2.new(0, 130, 0, 25), UDim2.new(0.8, 0, -0.01, 0)
+il.BackgroundColor3, il.TextColor3, il.Font, il.TextScaled, il.Parent, il.Visible = Color3.new(0, 0, 0), Color3.new(1, 1, 1), Enum.Font.GothamBold, true, gui, false
 
-AimLockButton.Name = "AimLockButton"
-AimLockButton.Size = UDim2.new(0, 50, 0, 50)
-AimLockButton.Position = UDim2.new(0.85, 0, 0.08, 0)
-AimLockButton.BackgroundColor3 = Color3.new(0, 0, 0)
-AimLockButton.TextColor3 = Color3.new(1, 0, 0)
-AimLockButton.Font = Enum.Font.GothamBold
-AimLockButton.Text = "AL"
-AimLockButton.TextScaled = true
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 5)
-UICorner.Parent = AimLockButton
+bindLabel.Name, bindLabel.Size, bindLabel.Position = "BindLabel", UDim2.new(0, 130, 0, 25), UDim2.new(0.8, 0, 0.02, 0)
+bindLabel.BackgroundColor3, bindLabel.TextColor3, bindLabel.Font, bindLabel.TextScaled, bindLabel.Parent, bindLabel.Visible = Color3.new(0, 0, 0), Color3.new(1, 1, 1), Enum.Font.GothamBold, true, gui, false
 
 local function getNearestPlayerToCrosshair()
-    local nearestPlayer = nil
-    local shortestDistance = math.huge
-    local camera = workspace.CurrentCamera
-
+    local nearest, shortest, cam = nil, math.huge, workspace.CurrentCamera
     for _, target in ipairs(game.Players:GetPlayers()) do
         if target ~= player and target.Character and target.Character:FindFirstChild("Head") then
-            local screenPos, onScreen = camera:WorldToScreenPoint(target.Character.Head.Position)
+            local pos, onScreen = cam:WorldToScreenPoint(target.Character.Head.Position)
             if onScreen then
-                local mousePos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    nearestPlayer = target
-                end
+                local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)).magnitude
+                if dist < shortest then nearest, shortest = target, dist end
             end
         end
     end
-
-    return nearestPlayer, shortestDistance
-end
-
-local function predictTargetPosition(target)
-    if target and target.Character and target.Character:FindFirstChild("Head") then
-        local head = target.Character.Head
-        local velocity = head.Velocity
-        local predictionTime = 0.1  -- Adjust this value to change prediction accuracy
-        return head.Position + velocity * predictionTime
-    end
-    return nil
+    return nearest, shortest
 end
 
 local function lookAtLockedTarget()
     if lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("Head") then
-        local targetPos = predictTargetPosition(lockedTarget) or (lockedTarget.Character.Head.Position + Vector3.new(0, 1, 0))
-        local playerPos = player.Character.HumanoidRootPart.Position
+        local head, playerPos = lockedTarget.Character.Head, player.Character.HumanoidRootPart.Position
+        local targetPos = (head.Position + head.Velocity * 0.1) or (head.Position + Vector3.new(0, 1, 0))
         local lookVector = (targetPos - playerPos).unit
-
         player.Character.HumanoidRootPart.CFrame = CFrame.new(playerPos, playerPos + lookVector)
         workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetPos)
     end
@@ -100,78 +53,51 @@ end
 
 local function toggleAiming()
     aiming = not aiming
-    if not bindKey then
-        AimLockButton.TextColor3 = aiming and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-    end
-
+    if not bindKey then alBtn.TextColor3 = aiming and Color3.new(0, 1, 0) or Color3.new(1, 0, 0) end
     if aiming then
         lockedTarget, distance = getNearestPlayerToCrosshair()
-        if lockedTarget then
-            IL.Text = "NP: " .. lockedTarget.Name .. " [" .. math.floor(distance) .. "]"
-        else
-            IL.Text = "NP: None"
-        end
-        aimingLoop = game:GetService("RunService").RenderStepped:Connect(lookAtLockedTarget)
+        il.Text = lockedTarget and "NP: " .. lockedTarget.Name .. " [" .. math.floor(distance) .. "]" or "NP: None"
+        loop = game:GetService("RunService").RenderStepped:Connect(lookAtLockedTarget)
     else
-        if aimingLoop then
-            aimingLoop:Disconnect()
-        end
-        lockedTarget = nil
-        IL.Text = ""
+        if loop then loop:Disconnect() end
+        lockedTarget, il.Text = nil, ""
     end
 end
 
-AimLockButton.MouseButton1Click:Connect(toggleAiming)
+alBtn.MouseButton1Click:Connect(toggleAiming)
 
 local function updateInfoLabel()
     while true do
         local nearestPlayer, distance = getNearestPlayerToCrosshair()
-        if nearestPlayer then
-            IL.Text = "NP: " .. nearestPlayer.Name .. " [" .. math.floor(distance) .. "]"
-        else
-            IL.Text = "NP: None"
-        end
+        il.Text = nearestPlayer and "NP: " .. nearestPlayer.Name .. " [" .. math.floor(distance) .. "]" or "NP: None"
         wait(0.1)
     end
 end
 
 local function enablePCMode()
-    MobileButton.Visible = false
-    PCButton.Visible = false
-    IL.Text = "Press any button to bind AimLock"
-    IL.Position = UDim2.new(0.45, 0, 0.45, 0)
+    mbBtn.Visible, pcBtn.Visible = false, false
+    il.Text, il.Visible, il.Position = "Press any key to bind AimLock", true, UDim2.new(0.8, 0, -0.01, 0)
     local inputService = game:GetService("UserInputService")
-
     local function onInputBegan(input, gameProcessed)
-        if not gameProcessed then
-            bindKey = input.KeyCode
-            IL.Text = "Binded to: " .. tostring(bindKey)
-            IL.Position = UDim2.new(0.80, 0, -0.01, 0)
+        if not gameProcessed and not bindKey then
+            bindKey, bindLabel.Visible = input.KeyCode, true
+            bindLabel.Text = "AimLock: " .. tostring(bindKey):gsub("Enum.KeyCode.", "")
             inputService.InputBegan:Connect(function(key, processed)
-                if not processed and key.KeyCode == bindKey then
-                    toggleAiming()
-                end
+                if not processed and key.KeyCode == bindKey then toggleAiming() end
             end)
         end
     end
-
     inputService.InputBegan:Connect(onInputBegan)
 end
 
-MobileButton.MouseButton1Click:Connect(function()
-    MobileButton.Visible = false
-    PCButton.Visible = false
-    AimLockButton.Parent = ScreenGui
-    AimLockButton.Visible = true
-    coroutine.resume(updateLoop)
+mbBtn.MouseButton1Click:Connect(function()
+    mbBtn.Visible, pcBtn.Visible = false, false
+    alBtn.Parent, alBtn.Visible, il.Visible = gui, true, true
+    coroutine.resume(coroutine.create(updateInfoLabel))
 end)
 
-PCButton.MouseButton1Click:Connect(enablePCMode)
+pcBtn.MouseButton1Click:Connect(enablePCMode)
 
-updateLoop = coroutine.create(updateInfoLabel)
+coroutine.resume(coroutine.create(updateInfoLabel))
 
-player.CharacterAdded:Connect(function()
-    ScreenGui.Parent = game.CoreGui
-end)
-
-coroutine.resume(updateLoop)
+player.CharacterAdded:Connect(function() gui.Parent = game.CoreGui end)
